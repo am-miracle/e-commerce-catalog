@@ -1,65 +1,212 @@
-import Image from "next/image";
+"use client";
+
+import { useMemo, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ProductGrid } from "@/components/product/product-grid";
+import { ProductList } from "@/components/product/product-list";
+import { ProductFilters } from "@/components/product/product-filters";
+import { ProductToolbar } from "@/components/product/product-toolbar";
+import { useProducts } from "@/lib/hooks/useProducts";
+import { Filters, SortOption } from "@/lib/types/product";
 
 export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Parse state from URL params
+  const viewMode = (searchParams.get("view") as "grid" | "list") || "grid";
+  const sortBy = (searchParams.get("sort") as SortOption) || "newest";
+
+  const filters: Partial<Filters> = useMemo(() => {
+    const categories =
+      searchParams.get("categories")?.split(",").filter(Boolean) || [];
+    const brands = searchParams.get("brands")?.split(",").filter(Boolean) || [];
+    const minPrice = parseFloat(searchParams.get("minPrice") || "0");
+    const maxPrice = parseFloat(searchParams.get("maxPrice") || "5000");
+    const minRating = parseFloat(searchParams.get("minRating") || "0");
+    const inStockOnly = searchParams.get("inStock") === "true";
+
+    return {
+      categories,
+      brands,
+      priceRange: [minPrice, maxPrice] as [number, number],
+      minRating,
+      inStockOnly,
+    };
+  }, [searchParams]);
+
+  // Update URL when state changes
+  const updateURL = useCallback(
+    (
+      newFilters: Partial<Filters>,
+      newSort: SortOption,
+      newView: "grid" | "list",
+    ) => {
+      const params = new URLSearchParams();
+
+      // Add view mode
+      if (newView !== "grid") {
+        params.set("view", newView);
+      }
+
+      // Add sort
+      if (newSort !== "newest") {
+        params.set("sort", newSort);
+      }
+
+      // Add categories
+      if (newFilters.categories && newFilters.categories.length > 0) {
+        params.set("categories", newFilters.categories.join(","));
+      }
+
+      // Add brands
+      if (newFilters.brands && newFilters.brands.length > 0) {
+        params.set("brands", newFilters.brands.join(","));
+      }
+
+      // Add price range
+      if (newFilters.priceRange) {
+        if (newFilters.priceRange[0] !== 0) {
+          params.set("minPrice", newFilters.priceRange[0].toString());
+        }
+        if (newFilters.priceRange[1] !== 5000) {
+          params.set("maxPrice", newFilters.priceRange[1].toString());
+        }
+      }
+
+      // Add rating
+      if (newFilters.minRating && newFilters.minRating > 0) {
+        params.set("minRating", newFilters.minRating.toString());
+      }
+
+      // Add in stock filter
+      if (newFilters.inStockOnly) {
+        params.set("inStock", "true");
+      }
+
+      // Update URL without page reload
+      const queryString = params.toString();
+      const newURL = queryString ? `/?${queryString}` : "/";
+      router.push(newURL, { scroll: false });
+    },
+    [router],
+  );
+
+  const { data, isLoading, error } = useProducts({
+    page: 1,
+    limit: 24,
+    filters,
+    sort: sortBy,
+  });
+
+  // Handlers
+  const handleFiltersChange = useCallback(
+    (newFilters: Partial<Filters>) => {
+      updateURL(newFilters, sortBy, viewMode);
+    },
+    [sortBy, viewMode, updateURL],
+  );
+
+  const handleSortChange = useCallback(
+    (newSort: SortOption) => {
+      updateURL(filters, newSort, viewMode);
+    },
+    [filters, viewMode, updateURL],
+  );
+
+  const handleViewModeChange = useCallback(
+    (mode: "grid" | "list") => {
+      updateURL(filters, sortBy, mode);
+    },
+    [filters, sortBy, updateURL],
+  );
+
+  // Memoize the product display component
+  const ProductDisplay = useMemo(() => {
+    if (!data?.products || data.products.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-[50vh] border rounded-lg bg-muted/20">
+          <div className="text-center">
+            <p className="text-lg font-semibold mb-2">No products found</p>
+            <p className="text-muted-foreground">Try adjusting your filters</p>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      );
+    }
+
+    return viewMode === "grid" ? (
+      <ProductGrid products={data.products} />
+    ) : (
+      <ProductList products={data.products} />
+    );
+  }, [data, viewMode]);
+
+  if (error) {
+    return (
+      <main className="min-h-screen">
+        <div className="container mx-auto py-8">
+          <div className="flex items-center justify-center h-[50vh]">
+            <div className="text-center">
+              <p className="text-destructive text-lg font-semibold mb-2">
+                Error loading products
+              </p>
+              <p className="text-muted-foreground">
+                Please try refreshing the page.
+              </p>
+            </div>
+          </div>
         </div>
       </main>
-    </div>
+    );
+  }
+
+  return (
+    <main className="min-h-screen">
+      <div className="container mx-auto px-4  py-6">
+        <div className="mb-6">
+          <h1 className="text-4xl font-bold mb-2">Product Catalog</h1>
+          <p className="text-muted-foreground">
+            Discover our amazing collection of products
+          </p>
+        </div>
+
+        <div className="flex gap-6">
+          {/* Filters Sidebar */}
+          <ProductFilters
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+          />
+
+          {/* Main Content Area */}
+          <div className="flex-1 min-w-0">
+            {/* Toolbar */}
+            <ProductToolbar
+              sortBy={sortBy}
+              onSortChange={handleSortChange}
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+              totalProducts={data?.total || 0}
+            />
+
+            {/* Loading Overlay for Product Area Only */}
+            <div className="relative">
+              {isLoading && (
+                <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+                  <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                    <p className="text-sm text-muted-foreground">
+                      Updating products...
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Product Display */}
+              {ProductDisplay}
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
   );
 }
