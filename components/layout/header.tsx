@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useCartStore } from "@/lib/stores/cartStores";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Search, Store } from "lucide-react";
@@ -12,7 +12,13 @@ import { Badge } from "../ui/badge";
 export function Header() {
   const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const totalItems = useCartStore((state) => state.totalItems);
+
+  // Use useSyncExternalStore to safely handle hydration with persisted state
+  const totalItems = useSyncExternalStore(
+    useCartStore.subscribe,
+    () => useCartStore.getState().getTotalItems(),
+    () => 0, // Server-side snapshot
+  );
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +75,6 @@ export function Header() {
               size="icon"
               className="relative"
               onClick={() => setCartOpen(true)}
-              aria-label={`Shopping cart with ${totalItems} items`}
             >
               <ShoppingCart className="w-5 h-5" />
               {totalItems > 0 && (

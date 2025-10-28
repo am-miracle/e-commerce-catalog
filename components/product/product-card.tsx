@@ -14,7 +14,7 @@ interface ProductCardProps {
 
 const ProductCard = memo(({ product }: ProductCardProps) => {
   const addItem = useCartStore((state: CartStore) => state.addItem);
-  const totalItems = useCartStore((state) => state.totalItems);
+  const totalItems = useCartStore((state) => state.getTotalItems());
 
   const handleAddToCart = useCallback(
     (e: React.MouseEvent) => {

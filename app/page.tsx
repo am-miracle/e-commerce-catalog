@@ -121,11 +121,10 @@ export default function Home() {
     [filters, sortBy, updateURL],
   );
 
-  // Memoize the product display component
   const ProductDisplay = useMemo(() => {
     if (!data?.products || data.products.length === 0) {
       return (
-        <div className="flex items-center justify-center h-[50vh] border rounded-lg bg-muted/20">
+        <div className="flex items-center justify-center h-full ">
           <div className="text-center">
             <p className="text-lg font-semibold mb-2">No products found</p>
             <p className="text-muted-foreground">Try adjusting your filters</p>
@@ -188,7 +187,6 @@ export default function Home() {
               totalProducts={data?.total || 0}
             />
 
-            {/* Loading Overlay for Product Area Only */}
             <div className="relative">
               {isLoading && (
                 <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
@@ -201,7 +199,6 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Product Display */}
               {ProductDisplay}
             </div>
           </div>

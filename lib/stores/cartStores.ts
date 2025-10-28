@@ -8,8 +8,8 @@ export interface CartStore {
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
-  totalPrice: number;
-  totalItems: number;
+  getTotalPrice: () => number;
+  getTotalItems: () => number;
 }
 
 export const useCartStore = create<CartStore>()(
@@ -65,16 +65,14 @@ export const useCartStore = create<CartStore>()(
         set({ items: [] });
       },
 
-      get totalPrice() {
-        return get().items.reduce(
-          (total, item) => total + item.product.price * item.quantity,
+      getTotalPrice: () =>
+        get().items.reduce(
+          (sum, item) => sum + item.product.price * item.quantity,
           0,
-        );
-      },
+        ),
 
-      get totalItems() {
-        return get().items.reduce((total, item) => total + item.quantity, 0);
-      },
+      getTotalItems: () =>
+        get().items.reduce((sum, item) => sum + item.quantity, 0),
     }),
     {
       name: "cart-storage",
