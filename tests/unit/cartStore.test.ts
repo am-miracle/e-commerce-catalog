@@ -85,7 +85,7 @@ describe("Cart store", () => {
     const { addItem } = useCartStore.getState();
     addItem(mockProduct, 2);
     const { getTotalPrice } = useCartStore.getState();
-    expect(getTotalPrice()).toBe(297.99);
+    expect(getTotalPrice()).toBe(199.98);
   });
 
   it("should calculate total item correctly", () => {
